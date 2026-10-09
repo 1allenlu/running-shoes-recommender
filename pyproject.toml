@@ -1,0 +1,48 @@
+[project]
+name = "shoe-rec"
+version = "0.1.0"
+description = "AI running shoe recommender from Fleet Feet / Volumental foot scans"
+authors = [
+    { name = "Allen Lu", email = "145704582+1allenlu@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.0",
+    "fastapi>=0.143.0",
+    "langchain>=1.4.4",
+    "langchain-anthropic>=1.7.5",
+    "langchain-core>=1.6.9",
+    "langsmith>=0.14.7",
+    "pgvector>=0.5.1",
+    "psycopg[binary]>=3.3.6",
+    "pydantic>=2.14.0",
+    "pydantic-settings>=2.15.0",
+    "python-multipart>=0.0.32",
+    "sqlalchemy>=2.1.4",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "db: needs a running Postgres with pgvector (DATABASE_URL)",
+    "tracing: sends a trace to LangSmith (needs LANGSMITH_API_KEY)",
+]
