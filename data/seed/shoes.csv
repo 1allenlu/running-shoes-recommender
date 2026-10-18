@@ -1,0 +1,21 @@
+brand,model,version,category,drop_mm,stack_heel_mm,stack_forefoot_mm,weight_g,widths_available,toe_box,upper_volume,heel_lock,price_usd
+Brooks,Ghost,17,daily,TODO,TODO,TODO,TODO,standard|wide|extra-wide,TODO,TODO,TODO,TODO
+Brooks,Adrenaline GTS,24,stability,TODO,TODO,TODO,TODO,standard|wide|extra-wide,TODO,TODO,TODO,TODO
+Brooks,Glycerin,22,max-cushion,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+ASICS,Novablast,5,daily,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+ASICS,Gel-Nimbus,27,max-cushion,TODO,TODO,TODO,TODO,standard|wide|extra-wide,TODO,TODO,TODO,TODO
+ASICS,Gel-Kayano,31,stability,TODO,TODO,TODO,TODO,standard|wide|extra-wide,TODO,TODO,TODO,TODO
+HOKA,Clifton,10,daily,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+HOKA,Bondi,9,max-cushion,TODO,TODO,TODO,TODO,standard|wide|extra-wide,TODO,TODO,TODO,TODO
+HOKA,Mach,6,tempo,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+HOKA,Arahi,7,stability,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+Saucony,Ride,18,daily,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+Saucony,Guide,18,stability,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+Saucony,Endorphin Speed,4,tempo,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+Saucony,Triumph,22,max-cushion,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+New Balance,Fresh Foam X 1080,v14,max-cushion,TODO,TODO,TODO,TODO,standard|wide|extra-wide,TODO,TODO,TODO,TODO
+New Balance,Fresh Foam X 880,v15,daily,TODO,TODO,TODO,TODO,standard|wide|extra-wide,TODO,TODO,TODO,TODO
+Nike,Pegasus,41,daily,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+Nike,Vomero,18,max-cushion,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+Nike,Invincible,3,max-cushion,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO
+Altra,Torin,8,daily,0,TODO,TODO,TODO,TODO,roomy,TODO,TODO,TODO

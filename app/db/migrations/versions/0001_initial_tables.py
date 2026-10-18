@@ -33,12 +33,7 @@ def upgrade() -> None:
         sa.Column("stack_heel_mm", sa.Numeric(4, 1)),
         sa.Column("stack_forefoot_mm", sa.Numeric(4, 1)),
         sa.Column("weight_g", sa.Integer()),
-        sa.Column(
-            "widths_available",
-            postgresql.ARRAY(sa.String(16)),
-            server_default="{standard}",
-            nullable=False,
-        ),
+        sa.Column("widths_available", postgresql.ARRAY(sa.String(16))),
         sa.Column("toe_box", sa.String(16)),
         sa.Column("upper_volume", sa.String(16)),
         sa.Column("heel_lock", sa.Boolean()),

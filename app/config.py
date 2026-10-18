@@ -12,11 +12,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     anthropic_api_key: SecretStr | None = None
-    llm_model: str = ""
+    llm_model: str = "claude-opus-5-5"
 
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     vector_backend: Literal["chroma", "pgvector"] = "chroma"
     chroma_dir: str = "./data/chroma"
+    upload_dir: str = "./data/uploads"
 
     database_url: str = "postgresql+psycopg://shoe:shoe@localhost:5432/shoe"
 

@@ -1,0 +1,307 @@
+[
+  {
+    "name": "wide-forefoot-low-instep",
+    "note": "Roadmap section 5 example: wide forefoot, low instep; needs roomy toe box but snug upper and secure heel.",
+    "foot_profile": {
+      "sex_scale": "men",
+      "left": {
+        "us_size": 8.1,
+        "width": "E",
+        "arch_height": {
+          "band": "low",
+          "position": 0.1
+        },
+        "instep_height": {
+          "band": "low",
+          "position": 0.15
+        },
+        "heel_width": {
+          "band": "wide",
+          "position": 0.75
+        },
+        "pressure": {
+          "band": "centered",
+          "position": 0.5
+        },
+        "arch_flexibility": {
+          "band": "moderate",
+          "position": 0.5
+        }
+      },
+      "right": {
+        "us_size": 8.3,
+        "width": "E",
+        "arch_height": {
+          "band": "low",
+          "position": 0.4
+        },
+        "instep_height": {
+          "band": "low",
+          "position": 0.2
+        },
+        "heel_width": {
+          "band": "medium",
+          "position": 0.62
+        },
+        "pressure": {
+          "band": "medial",
+          "position": 0.15
+        },
+        "arch_flexibility": {
+          "band": "flexible",
+          "position": 0.35
+        }
+      }
+    },
+    "questionnaire": {
+      "weekly_km": 30,
+      "goals": [
+        "daily training",
+        "half marathon"
+      ],
+      "surface": "road",
+      "feel": "balanced",
+      "budget_usd": 160,
+      "loved_shoes": [
+        {
+          "model": "Novablast 4",
+          "notes": "comfortable toe box"
+        }
+      ],
+      "disliked_shoes": [
+        {
+          "model": "Pegasus 40",
+          "notes": "too narrow in the toes"
+        }
+      ]
+    }
+  },
+  {
+    "name": "narrow-high-volume-women",
+    "note": "Women's scale, narrow B width, high arch and instep: needs a higher-volume upper, standard width.",
+    "foot_profile": {
+      "sex_scale": "women",
+      "left": {
+        "us_size": 7.4,
+        "width": "B",
+        "arch_height": {
+          "band": "high",
+          "position": 0.8
+        },
+        "instep_height": {
+          "band": "high",
+          "position": 0.75
+        },
+        "heel_width": {
+          "band": "narrow",
+          "position": 0.2
+        }
+      },
+      "right": {
+        "us_size": 7.3,
+        "width": "B",
+        "arch_height": {
+          "band": "high",
+          "position": 0.78
+        },
+        "instep_height": {
+          "band": "high",
+          "position": 0.7
+        },
+        "heel_width": {
+          "band": "narrow",
+          "position": 0.18
+        }
+      }
+    },
+    "questionnaire": {
+      "weekly_km": 20,
+      "goals": [
+        "10k"
+      ],
+      "surface": "road",
+      "feel": "soft",
+      "budget_usd": 180,
+      "loved_shoes": [],
+      "disliked_shoes": []
+    }
+  },
+  {
+    "name": "extra-wide-max-cushion",
+    "note": "Men's 3E, wants max cushioning for long easy runs on a budget.",
+    "foot_profile": {
+      "sex_scale": "men",
+      "left": {
+        "us_size": 10.6,
+        "width": "3E",
+        "arch_height": {
+          "band": "medium",
+          "position": 0.5
+        },
+        "instep_height": {
+          "band": "medium",
+          "position": 0.55
+        },
+        "heel_width": {
+          "band": "wide",
+          "position": 0.85
+        },
+        "pressure": {
+          "band": "centered",
+          "position": 0.5
+        },
+        "arch_flexibility": {
+          "band": "moderate",
+          "position": 0.5
+        }
+      },
+      "right": {
+        "us_size": 10.4,
+        "width": "3E",
+        "arch_height": {
+          "band": "medium",
+          "position": 0.45
+        },
+        "instep_height": {
+          "band": "medium",
+          "position": 0.5
+        },
+        "heel_width": {
+          "band": "wide",
+          "position": 0.8
+        },
+        "pressure": {
+          "band": "centered",
+          "position": 0.45
+        },
+        "arch_flexibility": {
+          "band": "moderate",
+          "position": 0.5
+        }
+      }
+    },
+    "questionnaire": {
+      "weekly_km": 45,
+      "goals": [
+        "marathon",
+        "long easy runs"
+      ],
+      "surface": "road",
+      "feel": "soft",
+      "budget_usd": 170,
+      "loved_shoes": [],
+      "disliked_shoes": []
+    }
+  },
+  {
+    "name": "standard-tempo-loves-novablast",
+    "note": "Men's D, wants a firmer shoe for workouts; loved Novablast 5, disliked Pegasus 41 (must be excluded).",
+    "foot_profile": {
+      "sex_scale": "men",
+      "left": {
+        "us_size": 9.1,
+        "width": "D",
+        "arch_height": {
+          "band": "medium",
+          "position": 0.5
+        },
+        "instep_height": {
+          "band": "medium",
+          "position": 0.5
+        },
+        "heel_width": {
+          "band": "medium",
+          "position": 0.5
+        }
+      },
+      "right": {
+        "us_size": 9.2,
+        "width": "D",
+        "arch_height": {
+          "band": "medium",
+          "position": 0.52
+        },
+        "instep_height": {
+          "band": "medium",
+          "position": 0.48
+        },
+        "heel_width": {
+          "band": "medium",
+          "position": 0.5
+        }
+      }
+    },
+    "questionnaire": {
+      "weekly_km": 55,
+      "goals": [
+        "tempo runs",
+        "10k race"
+      ],
+      "surface": "road",
+      "feel": "firm",
+      "budget_usd": 200,
+      "loved_shoes": [
+        {
+          "model": "Novablast 5",
+          "notes": "bouncy"
+        }
+      ],
+      "disliked_shoes": [
+        {
+          "model": "Pegasus 41",
+          "notes": "tight toe box"
+        }
+      ]
+    }
+  },
+  {
+    "name": "mismatched-feet-no-pressure-plate",
+    "note": "Women's, feet differ by half a size, no pressure-plate data; size must come from the longer (left) foot.",
+    "foot_profile": {
+      "sex_scale": "women",
+      "left": {
+        "us_size": 8.6,
+        "width": "D",
+        "arch_height": {
+          "band": "low",
+          "position": 0.2
+        },
+        "instep_height": {
+          "band": "medium",
+          "position": 0.4
+        },
+        "heel_width": {
+          "band": "medium",
+          "position": 0.55
+        }
+      },
+      "right": {
+        "us_size": 8.1,
+        "width": "C",
+        "arch_height": {
+          "band": "low",
+          "position": 0.25
+        },
+        "instep_height": {
+          "band": "medium",
+          "position": 0.45
+        },
+        "heel_width": {
+          "band": "medium",
+          "position": 0.5
+        }
+      }
+    },
+    "questionnaire": {
+      "weekly_km": 15,
+      "goals": [
+        "getting back into running"
+      ],
+      "surface": "road",
+      "feel": "balanced",
+      "budget_usd": 150,
+      "loved_shoes": [],
+      "disliked_shoes": []
+    }
+  }
+]

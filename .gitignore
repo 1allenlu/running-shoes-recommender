@@ -10,7 +10,7 @@ __pycache__/
 
 # Local data
 data/chroma/
-uploads/
+data/uploads/
 
 # OS / editors
 .DS_Store

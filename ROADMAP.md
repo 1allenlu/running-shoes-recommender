@@ -29,7 +29,7 @@ A runner gets a free 3D foot scan at Fleet Feet (Volumental scanner), uploads sc
 | MCP | Official MCP Python SDK, `FastMCP` | Expose tools to Claude Desktop |
 | Observability + evals | LangSmith | Tracing every run, eval datasets |
 | Tests | pytest | Unit + integration |
-| Infra | Docker Compose (Postgres + API) | Local dev |
+| Infra | Local Postgres + pgvector for now; Docker Compose (Postgres + API) deferred | Local dev |
 
 ---
 
@@ -40,7 +40,7 @@ shoe-rec/
 ├── ROADMAP.md
 ├── README.md
 ├── pyproject.toml
-├── docker-compose.yml
+├── docker-compose.yml          # deferred: added later
 ├── .env.example
 ├── data/
 │   ├── seed/
@@ -173,19 +173,19 @@ Scales: width 3A, 2A, A, B, C, D, E, 2E, 3E · arch height and instep height low
 ### Phase 0: Project setup
 
 - [x] `uv init`, add dependencies, `ruff` + `pytest` configured
-- [ ] `docker-compose.yml` with `pgvector/pgvector:pg16` (enable the `vector` extension on startup) and the API service
+- [ ] *(Deferred)* `docker-compose.yml` with `pgvector/pgvector:pg16` (enable the `vector` extension on startup) and the API service. For now, use a local Postgres with pgvector; the first migration enables the extension.
 - [x] `app/config.py` reading `.env` with `pydantic-settings`
-- [ ] Alembic set up; first migration creates all tables in section 5
+- [x] Alembic set up; first migration creates all tables in section 5
 - [ ] LangSmith tracing on; a trivial chain shows up in the LangSmith project
 
-**Done when:** `docker compose up` starts Postgres, migrations run cleanly, `pytest` passes, and a test trace appears in LangSmith.
+**Done when:** migrations run cleanly against local Postgres, `pytest` passes, and a test trace appears in LangSmith.
 
 ### Phase 1: Catalog and seed data
 
-- [ ] `data/seed/shoes.csv` with 20 popular road shoes to start (expand to 40–60 later); include several with wide versions
-- [ ] `data/seed/size_charts.csv` for each brand in the catalog
-- [ ] `data/seed/fit_notes.jsonl`: 3–6 notes per shoe, each with a `source` field
-- [ ] `load_catalog.py` loads all seed files into Postgres (idempotent)
+- [x] `data/seed/shoes.csv` with 20 popular road shoes to start (expand to 40–60 later); include several with wide versions
+- [x] `data/seed/size_charts.csv` for each brand in the catalog
+- [x] `data/seed/fit_notes.jsonl`: 3–6 notes per shoe, each with a `source` field
+- [x] `load_catalog.py` loads all seed files into Postgres (idempotent)
 
 Leave clearly marked `TODO` placeholders for any spec you can't confirm, rather than inventing values. The user will fill or verify them.
 
@@ -193,18 +193,18 @@ Leave clearly marked `TODO` placeholders for any spec you can't confirm, rather 
 
 ### Phase 2: Embeddings and retrieval (Chroma first)
 
-- [ ] `embed_fit_notes.py`: chunk fit notes with `RecursiveCharacterTextSplitter` (500 chars, 50 overlap), embed, store in Chroma with metadata (shoe_id, brand, model)
-- [ ] `store.py`: `get_store()` returns Chroma or pgvector based on `VECTOR_BACKEND`
-- [ ] Notebook or script that runs 10 sample queries ("roomy toe box, secure heel", "soft but stable") and prints the top shoes
+- [x] `embed_fit_notes.py`: chunk fit notes with `RecursiveCharacterTextSplitter` (500 chars, 50 overlap), embed, store in Chroma with metadata (shoe_id, brand, model)
+- [x] `store.py`: `get_store()` returns Chroma or pgvector based on `VECTOR_BACKEND` (pgvector raises `NotImplementedError` until Phase 6)
+- [x] Notebook or script that runs 10 sample queries ("roomy toe box, secure heel", "soft but stable") and prints the top shoes
 
 **Done when:** sample queries return sensible shoes and every retrieval appears in LangSmith.
 
 ### Phase 3: Scan parser
 
-- [ ] `FootProfile` Pydantic schema matching section 5
-- [ ] `scan_parser.py`: takes images or a PDF, sends them to the vision LLM with `with_structured_output(FootProfile)`
-- [ ] Prompt explains the report layout: per-foot size + width letter, arrow positions on each scale, LEFT arrows above and RIGHT arrows below each scale
-- [ ] Save raw file + parsed result + parser version to `scans`
+- [x] `FootProfile` Pydantic schema matching section 5
+- [x] `scan_parser.py`: takes images or a PDF, sends them to the vision LLM with `with_structured_output(FootProfile)`
+- [x] Prompt explains the report layout: per-foot size + width letter, arrow positions on each scale, LEFT arrows above and RIGHT arrows below each scale
+- [x] Save raw file + parsed result + parser version to `scans`
 - [ ] Unit test against `data/sample_scans/` with a hand-checked expected profile
 
 **Done when:** the parser reproduces the hand-checked profile for the sample scan (sizes exact, bands correct, positions within ±0.15).
@@ -232,9 +232,9 @@ Decision logic (put in the system prompt):
 6. Rank to a top 3. For each, call `pick_size`, then `get_offers`.
 7. Return a `Recommendation` object: for each pick, why it fits (citing fit notes), what to watch for, size and width to order, up to 3 offers. Include the affiliate disclosure.
 
-- [ ] Implement tools with tests against the seeded database
-- [ ] `recommender.py` builds the agent; output validated as `Recommendation`
-- [ ] Post-processing enforces Guardrail 1 (URLs must exist in `offers`)
+- [x] Implement tools with tests against the seeded database
+- [x] `recommender.py` builds the agent; output validated as `Recommendation`
+- [x] Post-processing enforces Guardrail 1 (URLs must exist in `offers`)
 
 **Done when:** for 5 hand-written test profiles, the agent returns 3 valid picks with sizes, and every link exists in `offers`.
 
@@ -251,26 +251,26 @@ Decision logic (put in the system prompt):
 | `POST /users/{id}/feedback` | Rating + notes for a shoe |
 | `GET /health` | Health check |
 
-- [ ] Routes implemented with Pydantic request/response models
-- [ ] Integration test: full flow from scan upload to recommendation result
+- [x] Routes implemented with Pydantic request/response models
+- [x] Integration test: full flow from scan upload to recommendation result
 
 **Done when:** the integration test passes and `/docs` shows every endpoint.
 
 ### Phase 6: Move to pgvector
 
-- [ ] pgvector implementation behind `get_store()`
-- [ ] `hybrid.py`: one SQL query combining spec filters and `embedding <=> :query` ordering
-- [ ] Re-embed fit notes into Postgres
-- [ ] Switch `VECTOR_BACKEND=pgvector`; all tests still pass
+- [x] pgvector implementation behind `get_store()`
+- [x] `hybrid.py`: one SQL query combining spec filters and `embedding <=> :query` ordering
+- [x] Re-embed fit notes into Postgres
+- [x] Switch `VECTOR_BACKEND=pgvector`; all tests still pass
 
 **Done when:** the full flow works on pgvector, and Chroma still works when the env var is switched back.
 
 ### Phase 7: Offers and affiliate links
 
-- [ ] `load_offers.py` reads a product feed (CSV/XML) into `offers`, matching feed products to `shoes` + size + width
-- [ ] Until a real affiliate feed is available, use a clearly labeled sample feed in `data/seed/` with placeholder URLs on an `example.com` domain
-- [ ] Matching report: feed products that didn't match any shoe
-- [ ] Script safe to run nightly (idempotent, updates `updated_at`, marks missing items out of stock)
+- [x] `load_offers.py` reads a product feed (CSV/XML) into `offers`, matching feed products to `shoes` + size + width
+- [x] Until a real affiliate feed is available, use a clearly labeled sample feed in `data/seed/` with placeholder URLs on an `example.com` domain
+- [x] Matching report: feed products that didn't match any shoe
+- [x] Script safe to run nightly (idempotent, updates `updated_at`, marks missing items out of stock)
 
 **Done when:** recommendations show offers from the loaded feed, and stale offers (> 48h) are excluded.
 

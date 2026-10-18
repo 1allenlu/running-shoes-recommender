@@ -6,7 +6,6 @@ from decimal import Decimal
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    ARRAY,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -19,7 +18,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 EMBEDDING_DIM = 384  # BAAI/bge-small-en-v1.5
@@ -62,9 +61,7 @@ class Shoe(Base):
     stack_heel_mm: Mapped[Decimal | None] = mapped_column(Numeric(4, 1))
     stack_forefoot_mm: Mapped[Decimal | None] = mapped_column(Numeric(4, 1))
     weight_g: Mapped[int | None]
-    widths_available: Mapped[list[str]] = mapped_column(
-        ARRAY(String(16)), server_default="{standard}"
-    )
+    widths_available: Mapped[list[str] | None] = mapped_column(ARRAY(String(16)))
     toe_box: Mapped[str | None] = mapped_column(String(16))
     upper_volume: Mapped[str | None] = mapped_column(String(16))
     heel_lock: Mapped[bool | None] = mapped_column(Boolean)
