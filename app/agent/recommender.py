@@ -8,7 +8,7 @@ computes sizes, attaches offers from the database, removes any link that is not 
 import uuid
 
 from langchain.agents import create_agent
-from langchain.agents.structured_output import ProviderStrategy
+from langchain.agents.structured_output import ProviderStrategy, ToolStrategy
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from langchain_core.vectorstores import VectorStore
@@ -20,6 +20,7 @@ from app.agent.prompts import RECOMMENDER_SYSTEM, recommend_request
 from app.agent.tools import build_tools, excluded_shoe_ids, get_offers
 from app.config import get_settings
 from app.db.models import FitNote, Offer, Shoe, User
+from app.llm import get_chat_model
 from app.schemas.foot_profile import FootProfile
 from app.schemas.recommendation import (
     AFFILIATE_DISCLOSURE,
@@ -31,23 +32,21 @@ from app.schemas.recommendation import (
 TOP_N = 3
 
 
-def default_model() -> BaseChatModel:
-    from langchain_anthropic import ChatAnthropic
-
-    settings = get_settings()
-    return ChatAnthropic(
-        model=settings.llm_model, api_key=settings.anthropic_api_key, max_tokens=16000
-    )
+def response_format():
+    # Claude: native structured output (ToolStrategy forces a tool call, which current Claude
+    # models reject). Gemini and Ollama: the answer comes back as a final tool call. On Ollama
+    # a JSON output format applies to every turn and stops the agent from calling tools.
+    if get_settings().llm_provider == "anthropic":
+        return ProviderStrategy(AgentRecommendation)
+    return ToolStrategy(AgentRecommendation)
 
 
 def build_agent(session: Session, store: VectorStore, model: BaseChatModel | None = None):
-    # ProviderStrategy = Claude's native structured output. ToolStrategy would force a tool
-    # call, which current Claude models reject.
     return create_agent(
-        model or default_model(),
+        model or get_chat_model(),
         build_tools(session, store),
         system_prompt=RECOMMENDER_SYSTEM,
-        response_format=ProviderStrategy(AgentRecommendation),
+        response_format=response_format(),
     )
 
 

@@ -4,6 +4,7 @@ uv run python -m app.parsing.scan_parser report.pdf [more screenshots...]
 """
 
 import base64
+import io
 import mimetypes
 import shutil
 import sys
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models import Scan
+from app.llm import get_chat_model, reads_pdfs
 from app.parsing.prompts import SCAN_PARSER_INSTRUCTION, SCAN_PARSER_SYSTEM
 from app.schemas.foot_profile import FootProfile
 
@@ -27,7 +29,7 @@ PDF_TYPE = "application/pdf"
 
 
 def content_block(path: Path) -> dict:
-    """LangChain standard content block for one report file."""
+    """LangChain standard content block for one report file (PDFs as a file block)."""
     mime_type, _ = mimetypes.guess_type(path.name)
     if mime_type not in IMAGE_TYPES | {PDF_TYPE}:
         raise ValueError(f"{path.name}: unsupported file type {mime_type}; use PNG, JPEG or PDF")
@@ -36,28 +38,44 @@ def content_block(path: Path) -> dict:
     return {"type": block_type, "base64": data, "mime_type": mime_type}
 
 
-def build_messages(paths: list[Path]) -> list:
+def pdf_page_images(path: Path, scale: float = 2.0) -> list[dict]:
+    """Render each PDF page to a PNG image block, for models that can't read PDFs."""
+    import pypdfium2
+
+    blocks = []
+    pdf = pypdfium2.PdfDocument(path)
+    try:
+        for page in pdf:
+            buffer = io.BytesIO()
+            page.render(scale=scale).to_pil().save(buffer, format="PNG")
+            data = base64.standard_b64encode(buffer.getvalue()).decode()
+            blocks.append({"type": "image", "base64": data, "mime_type": "image/png"})
+    finally:
+        pdf.close()
+    return blocks
+
+
+def build_messages(paths: list[Path], pdf_as_images: bool | None = None) -> list:
     if not paths:
         raise ValueError("no report files given")
-    content = [content_block(p) for p in paths] + [
-        {"type": "text", "text": SCAN_PARSER_INSTRUCTION}
-    ]
+    if pdf_as_images is None:
+        pdf_as_images = not reads_pdfs()
+    content = []
+    for path in paths:
+        block = content_block(path)
+        if block["type"] == "file" and pdf_as_images:
+            content.extend(pdf_page_images(path))
+        else:
+            content.append(block)
+    content.append({"type": "text", "text": SCAN_PARSER_INSTRUCTION})
     return [SystemMessage(SCAN_PARSER_SYSTEM), HumanMessage(content=content)]
 
 
 def build_parser() -> Runnable:
     """Vision LLM bound to the FootProfile schema."""
-    from langchain_anthropic import ChatAnthropic
-
-    settings = get_settings()
-    llm = ChatAnthropic(
-        model=settings.llm_model,
-        api_key=settings.anthropic_api_key,
-        max_tokens=16000,
-    )
-    # json_schema uses Claude's native structured outputs; the default (forced tool call)
-    # is rejected by current models.
-    return llm.with_structured_output(FootProfile, method="json_schema")
+    # json_schema = native structured output (Claude) or a JSON-schema `format` (Ollama).
+    # The default (forced tool call) is rejected by current Claude models.
+    return get_chat_model().with_structured_output(FootProfile, method="json_schema")
 
 
 def parse_scan(paths: list[Path], parser: Runnable | None = None) -> FootProfile:

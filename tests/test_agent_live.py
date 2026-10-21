@@ -11,11 +11,11 @@ from sqlalchemy import select
 
 from app.agent.recommender import run_recommendation
 from app.agent.tools import resolve_shoe_names
-from app.config import get_settings
 from app.db.models import Offer, User
 from app.ingest.embed_fit_notes import embed_fit_notes
 from app.ingest.load_catalog import DEFAULT_SEED_DIR, load_catalog
 from app.ingest.load_offers import DEFAULT_FEED, load_offers
+from app.llm import llm_ready
 from app.retrieval.store import get_store
 
 PROFILES = json.loads(Path("evals/datasets/agent_profiles.json").read_text())
@@ -24,9 +24,12 @@ pytestmark = [pytest.mark.db, pytest.mark.llm]
 
 
 @pytest.fixture
-def real_catalog(db_session, backend, tmp_path):
-    if get_settings().anthropic_api_key is None:
-        pytest.skip("ANTHROPIC_API_KEY not set")
+def real_catalog(db_session, tmp_path):
+    # Chroma only: the search backend doesn't change the model's work, and each profile costs
+    # ~10-20 model requests, which matters on free tiers.
+    ready, reason = llm_ready()
+    if not ready:
+        pytest.skip(reason)
     shutil.copytree(DEFAULT_SEED_DIR, tmp_path / "seed")
     load_catalog(db_session, tmp_path / "seed")
     load_offers(db_session, DEFAULT_FEED)

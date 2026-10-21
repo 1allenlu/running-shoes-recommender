@@ -11,8 +11,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
+    llm_provider: Literal["anthropic", "google", "ollama"] = "anthropic"
+    llm_model: str = ""  # empty = the provider's default (app.llm.DEFAULT_MODELS)
     anthropic_api_key: SecretStr | None = None
-    llm_model: str = "claude-opus-5-5"
+    google_api_key: SecretStr | None = None
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_num_ctx: int = 32768
+    ollama_think: bool = False
 
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     vector_backend: Literal["chroma", "pgvector"] = "chroma"

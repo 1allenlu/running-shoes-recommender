@@ -11,13 +11,46 @@ Requires Python 3.12, [uv](https://docs.astral.sh/uv/), and a local Postgres wit
 
 ```bash
 uv sync                      # install dependencies into .venv
-cp .env.example .env         # then fill in ANTHROPIC_API_KEY, LANGSMITH_API_KEY, LLM_MODEL
+cp .env.example .env         # then pick LLM_PROVIDER (see below) and add any keys
 createuser -s shoe && createdb -O shoe shoe && createdb -O shoe shoe_test
 uv run alembic upgrade head  # creates all tables (and enables the vector extension)
 uv run uvicorn app.api.main:app --reload
 ```
 
 The API runs at http://localhost:8000 (`/health`, `/docs`).
+
+## Choosing the LLM
+
+The scan parser and the agent use one chat model, set by `LLM_PROVIDER`:
+
+| `LLM_PROVIDER` | Cost | Default `LLM_MODEL` | Notes |
+| --- | --- | --- | --- |
+| `anthropic` | Paid API | `claude-opus-5-5` | Best quality; needs `ANTHROPIC_API_KEY`; reads PDFs directly |
+| `google` | Free tier (cloud) | `gemini-3.5-flash-lite` | Needs a free `GOOGLE_API_KEY` from aistudio.google.com/apikey; reads PDFs directly |
+| `ollama` | Free, local | `qwen3-vl:8b` | No key, but runs on your machine (heavy: an 8B model on a laptop is slow and hot) |
+
+To use Gemini's free tier:
+
+```bash
+echo "LLM_PROVIDER=google" >> .env
+echo "GOOGLE_API_KEY=..." >> .env       # from aistudio.google.com/apikey
+```
+
+Free-tier limits are per day (see aistudio.google.com/rate-limit). One recommendation makes
+roughly 10-20 model calls, so run a single live profile at a time, e.g.
+`uv run pytest -m llm -k wide-forefoot`. Free-tier prompts may be used by Google to improve
+its products; check the terms before sending real scans.
+
+To use Ollama:
+
+```bash
+brew install ollama && brew services start ollama
+ollama pull qwen3-vl:8b                 # ~6 GB; reads images and calls tools
+echo "LLM_PROVIDER=ollama" >> .env
+```
+
+Small local models read scans and run the agent less reliably than Claude, so check the
+parsed profile before confirming it, and watch the `flags` on recommendations.
 
 ## Catalog and retrieval
 

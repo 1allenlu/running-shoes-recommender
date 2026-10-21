@@ -16,6 +16,8 @@ from sqlalchemy.orm import Session
 from app.agent import sizing
 from app.db.models import Feedback, FitNote, Offer, Shoe, User
 from app.retrieval.hybrid import ShoeCandidate, ShoeFilters, search_shoes
+from app.retrieval.store import relevance_search
+from app.schemas.foot_profile import FootProfile
 from app.schemas.recommendation import OfferLink
 
 OFFER_MAX_AGE = timedelta(hours=48)
@@ -51,6 +53,24 @@ def excluded_shoe_ids(session: Session, user: User) -> set[int]:
     return ids
 
 
+def _fit_basis(foot_profile: dict | None) -> dict | None:
+    """Longer foot's size and width, with the width already as a shoe width category."""
+    if not foot_profile:
+        return None
+    try:
+        profile = FootProfile.model_validate(foot_profile)
+    except ValueError:
+        return None
+    foot = profile.longer_foot
+    return {
+        "longer_foot": "left" if foot is profile.left else "right",
+        "us_size": foot.us_size,
+        "width_letter": foot.width,
+        "shoe_width": sizing.shoe_width(foot.width, profile.sex_scale),
+        "sex_scale": profile.sex_scale,
+    }
+
+
 def get_profile(session: Session, user_id: uuid.UUID) -> dict:
     user = session.get(User, user_id)
     if user is None:
@@ -63,6 +83,7 @@ def get_profile(session: Session, user_id: uuid.UUID) -> dict:
     ).all()
     loved = [s["model"] for s in (user.questionnaire or {}).get("loved_shoes", [])]
     return {
+        "fit_basis": _fit_basis(user.foot_profile),
         "foot_profile": user.foot_profile,
         "questionnaire": user.questionnaire,
         "loved_shoe_ids": resolve_shoe_names(session, loved),
@@ -82,7 +103,7 @@ def get_profile(session: Session, user_id: uuid.UUID) -> dict:
 
 
 def get_fit_notes(store: VectorStore, shoe_id: int, question: str, k: int = 4) -> list[dict]:
-    hits = store.similarity_search_with_relevance_scores(question, k=k, filter={"shoe_id": shoe_id})
+    hits = relevance_search(store, question, k=k, filter={"shoe_id": shoe_id})
     return [
         {
             "fit_note_id": doc.metadata["fit_note_id"],

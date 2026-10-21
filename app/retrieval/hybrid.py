@@ -7,7 +7,7 @@ excluding the shoe; each candidate lists its unknown specs so the agent can say 
 from typing import Literal
 
 from langchain_core.vectorstores import VectorStore
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db.models import FitNote, Shoe
 from app.retrieval.store import relevance_search
+from app.schemas.foot_profile import WIDTH_LETTERS
 
 SPEC_FIELDS = (
     "category",
@@ -31,8 +32,14 @@ SPEC_FIELDS = (
 
 
 class ShoeFilters(BaseModel):
+    # Unknown fields are errors, so a model that invents one (e.g. "budget") is told the
+    # real names instead of having the filter silently ignored.
+    model_config = ConfigDict(extra="forbid")
+
     width: Literal["standard", "wide", "extra-wide"] | None = Field(
-        default=None, description="Width the shoe must come in"
+        default=None,
+        description="Width the shoe must come in: standard, wide or extra-wide (not a "
+        "width letter; get_profile gives the runner's shoe_width)",
     )
     toe_box: list[Literal["narrow", "medium", "roomy"]] | None = None
     upper_volume: list[Literal["low", "medium", "high"]] | None = None
@@ -43,6 +50,21 @@ class ShoeFilters(BaseModel):
     min_stack_heel_mm: float | None = None
     max_stack_heel_mm: float | None = None
     exclude_shoe_ids: list[int] = []
+
+    @field_validator("toe_box", "upper_volume", "categories", "exclude_shoe_ids", mode="before")
+    @classmethod
+    def _single_value_as_list(cls, value):
+        return [value] if isinstance(value, str | int) else value
+
+    @field_validator("width", mode="before")
+    @classmethod
+    def _width_word(cls, value):
+        if isinstance(value, str) and value.upper() in WIDTH_LETTERS:
+            raise ValueError(
+                f"width {value!r} is a width letter; pass standard, wide or extra-wide "
+                "(get_profile returns the runner's shoe_width)"
+            )
+        return value
 
 
 class ShoeCandidate(BaseModel):

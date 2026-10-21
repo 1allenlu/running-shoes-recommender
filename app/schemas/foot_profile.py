@@ -5,11 +5,12 @@ an arrow on a population scale. Arrows can sit between bands, so each scale stor
 band and a 0-1 position along the scale (0 = left end, 1 = right end).
 """
 
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, Field, field_validator
 
 Width = Literal["3A", "2A", "A", "B", "C", "D", "E", "2E", "3E"]
+WIDTH_LETTERS = set(get_args(Width))
 
 
 class _Scale(BaseModel):

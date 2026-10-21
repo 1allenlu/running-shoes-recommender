@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.config import get_settings
 from app.db.models import Scan, User
+from app.llm import llm_ready
 from app.parsing.compare import profile_mismatches
 from app.parsing.scan_parser import PARSER_VERSION, build_messages, parse_scan, save_scan
 from app.schemas.foot_profile import FootProfile
@@ -49,10 +50,27 @@ def test_rejects_position_outside_scale(profile):
 
 
 def test_messages_carry_images_and_pdf(report_files):
-    system, human = build_messages(report_files)
+    system, human = build_messages(report_files, pdf_as_images=False)
     assert "ABOVE" in system.content and "BELOW" in system.content
     types = [(b["type"], b.get("mime_type")) for b in human.content]
     assert types == [("image", "image/png"), ("file", "application/pdf"), ("text", None)]
+
+
+def test_pdf_pages_become_images_for_local_models(tmp_path):
+    from PIL import Image
+
+    pdf = tmp_path / "report.pdf"
+    pages = [Image.new("RGB", (200, 100), c) for c in ("white", "gray")]
+    pages[0].save(pdf, save_all=True, append_images=pages[1:])
+
+    _, human = build_messages([pdf], pdf_as_images=True)
+    assert [(b["type"], b.get("mime_type")) for b in human.content] == [
+        ("image", "image/png"),
+        ("image", "image/png"),
+        ("text", None),
+    ]
+    _, human = build_messages([pdf], pdf_as_images=False)
+    assert human.content[0]["type"] == "file"
 
 
 def test_rejects_unsupported_files(tmp_path):
@@ -109,8 +127,9 @@ def sample_scans() -> list[Path]:
 @pytest.mark.llm
 @pytest.mark.parametrize("scan_dir", sample_scans(), ids=lambda d: d.name)
 def test_parser_matches_hand_checked_profile(scan_dir):
-    if get_settings().anthropic_api_key is None:
-        pytest.skip("ANTHROPIC_API_KEY not set")
+    ready, reason = llm_ready()
+    if not ready:
+        pytest.skip(reason)
     files = sorted(p for p in scan_dir.iterdir() if p.suffix.lower() in REPORT_SUFFIXES)
     expected = FootProfile.model_validate(json.loads((scan_dir / "expected.json").read_text()))
     assert profile_mismatches(expected, parse_scan(files)) == []
