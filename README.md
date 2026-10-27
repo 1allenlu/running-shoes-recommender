@@ -19,6 +19,18 @@ uv run uvicorn app.api.main:app --reload
 
 The API runs at http://localhost:8000 (`/health`, `/docs`).
 
+## Web app
+
+```bash
+uv run uvicorn app.api.main:app --reload     # then open http://localhost:8000
+```
+
+The web app (`app/web/`: plain HTML, CSS and JavaScript, no build step) walks a runner through
+scan upload → confirm the profile → questionnaire → three picks with sizes and buy links →
+feedback. It follows the system light/dark setting and remembers the session in the browser,
+so a reload returns to the same step. If no LLM is configured it says so, and the scan can be
+entered by hand. The API docs stay at `/docs`.
+
 ## Choosing the LLM
 
 The scan parser and the agent use one chat model, set by `LLM_PROVIDER`:

@@ -58,7 +58,13 @@ def upload_scan(
                 content_block(path)  # validates the file type before calling the LLM
         except ValueError as e:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
-        profile = parse(paths)
+        try:
+            profile = parse(paths)
+        except Exception as e:
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                f"Couldn't read the report ({type(e).__name__}: {e})",
+            ) from e
         scan = save_scan(session, user_id, paths, profile)
     return ScanOut(scan_id=scan.id, parser_version=PARSER_VERSION, parsed_profile=profile)
 

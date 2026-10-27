@@ -28,6 +28,40 @@ def test_health(client):
     assert response.json() == {"status": "ok"}
 
 
+def test_web_app_served(client):
+    page = client.get("/")
+    assert page.status_code == 200
+    assert "text/html" in page.headers["content-type"]
+    assert "Never guess on a shoe again." in page.text
+    for asset in ("/app.js", "/styles.css"):
+        assert client.get(asset).status_code == 200
+
+
+def test_status_reports_llm_readiness(client, monkeypatch):
+    monkeypatch.setattr(get_settings(), "llm_provider", "google")
+    monkeypatch.setattr(get_settings(), "google_api_key", None)
+    monkeypatch.setattr(get_settings(), "llm_model", "")
+    body = client.get("/status").json()
+    assert body == {
+        "llm_ready": False,
+        "reason": "GOOGLE_API_KEY not set",
+        "provider": "google",
+        "model": "gemini-3.5-flash-lite",
+    }
+
+
+def test_unreadable_scan_is_a_clear_error(client, tmp_path, monkeypatch):
+    def broken(paths):
+        raise RuntimeError("GOOGLE_API_KEY not set")
+
+    app.dependency_overrides[deps.get_scan_parser] = lambda: broken
+    monkeypatch.setattr(get_settings(), "upload_dir", str(tmp_path))
+    user_id = client.post("/users").json()["id"]
+    response = client.post(f"/users/{user_id}/scans", files=[("files", ("a.png", b"x"))])
+    assert response.status_code == 502
+    assert "GOOGLE_API_KEY not set" in response.json()["detail"]
+
+
 def test_docs_list_every_endpoint(client):
     paths = client.get("/openapi.json").json()["paths"]
     assert {(p, m) for p, ops in paths.items() for m in ops} >= {
@@ -39,6 +73,7 @@ def test_docs_list_every_endpoint(client):
         ("/tasks/{task_id}", "get"),
         ("/users/{user_id}/feedback", "post"),
         ("/health", "get"),
+        ("/status", "get"),
     }
     assert client.get("/docs").status_code == 200
 

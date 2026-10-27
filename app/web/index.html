@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <title>Fitted · Running shoes that fit</title>
+  <meta name="description" content="Upload your 3D foot scan and get the three running shoes that fit you best, with the size to order.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230071e3'/%3E%3Cpath d='M14 40c8 0 12-12 22-12 6 0 10 4 14 6v6c0 2-2 4-4 4H18c-2 0-4-2-4-4z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="nav" role="banner">
+    <div class="nav-inner">
+      <button class="wordmark" type="button" data-action="home" aria-label="Fitted, start over">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" class="mark-tile"/><path d="M12 40c9 0 13-13 23-13 7 0 11 4 16 7v6c0 2.2-1.8 4-4 4H16c-2.2 0-4-1.8-4-4z" class="mark-shoe"/></svg>
+        Fitted
+      </button>
+      <nav class="steps" aria-label="Progress">
+        <ol>
+          <li data-step="scan">Scan</li>
+          <li data-step="confirm">Confirm</li>
+          <li data-step="about">About you</li>
+          <li data-step="results">Your picks</li>
+        </ol>
+      </nav>
+      <button class="nav-link" type="button" data-action="restart" hidden>Start over</button>
+    </div>
+    <div class="progress" aria-hidden="true"><span></span></div>
+  </header>
+
+  <div class="banner" id="status-banner" role="status" hidden></div>
+
+  <main id="main" tabindex="-1">
+
+    <!-- Welcome -->
+    <section class="screen" data-screen="welcome" aria-labelledby="welcome-title">
+      <div class="hero">
+        <p class="eyebrow">Running shoe fitting</p>
+        <h1 id="welcome-title" class="display">Get scanned once.<br><span class="gradient">Never guess on a shoe again.</span></h1>
+        <p class="lede">Bring the 3D foot scan from your running store. We'll find the three shoes that fit your feet best, tell you the size to order, and show you where to buy that exact pair.</p>
+        <div class="actions">
+          <button class="btn btn-primary btn-large" type="button" data-action="start">Get started</button>
+          <button class="btn btn-link" type="button" data-action="how">How it works <span aria-hidden="true">›</span></button>
+        </div>
+      </div>
+
+      <div class="features" id="how">
+        <article class="feature">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/><path d="M8 15l3-3 2 2 3-4"/></svg>
+          </div>
+          <h2>Upload your scan</h2>
+          <p>Screenshots or the PDF of your report. We read the size, width, arch, instep and heel for each foot.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>
+          </div>
+          <h2>Tell us how you run</h2>
+          <p>Weekly distance, the feel you like, your budget, and shoes you've loved or didn't get along with.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>
+          </div>
+          <h2>Get three picks</h2>
+          <p>Why each one fits your feet, what to watch for, the size and width to order, and where it's in stock.</p>
+        </article>
+      </div>
+      <p class="fine center">We recommend on fit and comfort. We don't diagnose, treat or prevent injury.</p>
+    </section>
+
+    <!-- Scan -->
+    <section class="screen" data-screen="scan" aria-labelledby="scan-title" hidden>
+      <header class="screen-head">
+        <p class="eyebrow">Step 1 of 3</p>
+        <h1 id="scan-title" class="title">Add your foot scan.</h1>
+        <p class="lede">Upload the screenshots or the PDF from your Fleet Feet scan. Everything stays private to you.</p>
+      </header>
+
+      <label class="dropzone" id="dropzone">
+        <input id="scan-input" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" multiple>
+        <span class="dropzone-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        </span>
+        <span class="dropzone-title">Drop your report here</span>
+        <span class="dropzone-sub">or <u>choose files</u> · PNG, JPEG or PDF</span>
+      </label>
+
+      <ul class="files" id="file-list" aria-live="polite"></ul>
+
+      <div class="actions">
+        <button class="btn btn-primary btn-large" type="button" data-action="upload" disabled>Read my scan</button>
+        <button class="btn btn-link" type="button" data-action="manual">Enter details by hand <span aria-hidden="true">›</span></button>
+      </div>
+    </section>
+
+    <!-- Confirm -->
+    <section class="screen" data-screen="confirm" aria-labelledby="confirm-title" hidden>
+      <header class="screen-head">
+        <p class="eyebrow">Step 2 of 3</p>
+        <h1 id="confirm-title" class="title">Does this look right?</h1>
+        <p class="lede">Check each value against your report and fix anything we misread. Your size and width come from your longer foot.</p>
+      </header>
+
+      <div class="card">
+        <div class="row">
+          <span class="row-label" id="scale-label">Size scale</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="scale-label" data-field="sex_scale">
+            <button type="button" role="radio" data-value="men">Men's</button>
+            <button type="button" role="radio" data-value="women">Women's</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="feet" id="feet"></div>
+
+      <div class="actions">
+        <button class="btn btn-primary btn-large" type="button" data-action="confirm">Looks good</button>
+        <button class="btn btn-link" type="button" data-action="back-scan"><span aria-hidden="true">‹</span> Back</button>
+      </div>
+    </section>
+
+    <!-- About you -->
+    <section class="screen" data-screen="about" aria-labelledby="about-title" hidden>
+      <header class="screen-head">
+        <p class="eyebrow">Step 3 of 3</p>
+        <h1 id="about-title" class="title">Tell us how you run.</h1>
+        <p class="lede">A few questions so we can match the feel, not just the fit.</p>
+      </header>
+
+      <div class="card stack">
+        <div class="field">
+          <div class="field-head">
+            <label for="weekly-km">Weekly distance</label>
+            <output id="weekly-km-out" for="weekly-km">30 km</output>
+          </div>
+          <input id="weekly-km" type="range" min="0" max="150" step="5" value="30">
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="goals-label">What are you training for?</span>
+          <div class="chips" role="group" aria-labelledby="goals-label" id="goals"></div>
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="feel-label">How should they feel?</span>
+          <div class="segmented wide" role="radiogroup" aria-labelledby="feel-label" data-field="feel">
+            <button type="button" role="radio" data-value="soft">Soft</button>
+            <button type="button" role="radio" data-value="balanced">Balanced</button>
+            <button type="button" role="radio" data-value="firm">Firm</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <label for="budget">Budget</label>
+            <output id="budget-out" for="budget">Up to $160</output>
+          </div>
+          <input id="budget" type="range" min="80" max="300" step="10" value="160">
+          <label class="toggle">
+            <input type="checkbox" id="no-budget"> <span>No budget limit</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card stack">
+        <div class="field">
+          <label for="loved-input" class="field-label">Shoes you've loved <span class="optional">Optional</span></label>
+          <div class="tokens" data-tokens="loved">
+            <input id="loved-input" type="text" placeholder="e.g. Novablast 4, then press Return" autocomplete="off">
+          </div>
+        </div>
+        <div class="field">
+          <label for="disliked-input" class="field-label">Shoes that didn't work <span class="optional">Optional</span></label>
+          <div class="tokens" data-tokens="disliked">
+            <input id="disliked-input" type="text" placeholder="e.g. Pegasus 40, then press Return" autocomplete="off">
+          </div>
+          <p class="fine">We'll never recommend these.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary btn-large" type="button" data-action="recommend">Find my shoes</button>
+        <button class="btn btn-link" type="button" data-action="back-confirm"><span aria-hidden="true">‹</span> Back</button>
+      </div>
+    </section>
+
+    <!-- Working -->
+    <section class="screen" data-screen="working" aria-labelledby="working-title" hidden>
+      <div class="working">
+        <div class="orbit" aria-hidden="true"><span></span><span></span><span></span></div>
+        <h1 id="working-title" class="title">Finding your shoes.</h1>
+        <p class="lede" id="working-line" aria-live="polite">Reading your scan…</p>
+        <p class="fine">This usually takes under a minute.</p>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section class="screen" data-screen="results" aria-labelledby="results-title" hidden>
+      <header class="screen-head">
+        <p class="eyebrow">Your picks</p>
+        <h1 id="results-title" class="title">Made for your feet.</h1>
+        <p class="lede" id="results-summary"></p>
+      </header>
+
+      <div class="picks" id="picks"></div>
+
+      <details class="notes" id="flags" hidden>
+        <summary>Notes on this recommendation</summary>
+        <ul></ul>
+      </details>
+
+      <p class="fine center" id="disclosure" hidden></p>
+
+      <div class="actions results-actions">
+        <button class="btn btn-secondary" type="button" data-action="rerun">Refresh picks</button>
+        <button class="btn btn-link" type="button" data-action="back-about">Change my answers <span aria-hidden="true">›</span></button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Feedback sheet -->
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+    <div class="sheet-grabber" aria-hidden="true"></div>
+    <h2 id="sheet-title">How did they feel?</h2>
+    <p class="sheet-sub" id="sheet-shoe"></p>
+    <div class="stars" role="radiogroup" aria-label="Rating" id="stars">
+      <button type="button" role="radio" data-value="1" aria-label="1 star">★</button>
+      <button type="button" role="radio" data-value="2" aria-label="2 stars">★</button>
+      <button type="button" role="radio" data-value="3" aria-label="3 stars">★</button>
+      <button type="button" role="radio" data-value="4" aria-label="4 stars">★</button>
+      <button type="button" role="radio" data-value="5" aria-label="5 stars">★</button>
+    </div>
+    <label class="field-label" for="feedback-notes">Anything we should know?</label>
+    <textarea id="feedback-notes" rows="3" placeholder="e.g. Toe box felt narrow after 10K, heel stayed put."></textarea>
+    <p class="fine">We use this to sharpen your next picks. A low rating means we won't suggest this shoe again.</p>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" type="button" data-action="close-sheet">Cancel</button>
+      <button class="btn btn-primary" type="button" data-action="send-feedback" disabled>Send</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <template id="foot-template">
+    <article class="card foot">
+      <h2 class="foot-title"></h2>
+      <div class="foot-grid">
+        <label class="mini">
+          <span>US size</span>
+          <input type="number" min="3" max="18" step="0.1" data-k="us_size" inputmode="decimal">
+        </label>
+        <label class="mini">
+          <span>Width</span>
+          <select data-k="width"></select>
+        </label>
+      </div>
+      <div class="scales"></div>
+    </article>
+  </template>
+
+  <template id="pick-template">
+    <article class="pick">
+      <div class="pick-head">
+        <span class="pick-rank"></span>
+        <div>
+          <p class="pick-brand"></p>
+          <h2 class="pick-name"></h2>
+        </div>
+      </div>
+      <div class="pick-size">
+        <div>
+          <span class="size-label">Order</span>
+          <span class="size-value"></span>
+        </div>
+        <span class="badge"></span>
+      </div>
+      <p class="size-basis"></p>
+      <h3>Why it fits</h3>
+      <ul class="why"></ul>
+      <h3 class="watch-head">Watch for</h3>
+      <ul class="watch"></ul>
+      <div class="offers"></div>
+      <button class="btn btn-link small" type="button" data-action="feedback">Tried them? Tell us how they felt <span aria-hidden="true">›</span></button>
+    </article>
+  </template>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
