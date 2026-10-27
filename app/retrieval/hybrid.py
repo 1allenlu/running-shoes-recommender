@@ -49,6 +49,7 @@ class ShoeFilters(BaseModel):
     max_drop_mm: float | None = None
     min_stack_heel_mm: float | None = None
     max_stack_heel_mm: float | None = None
+    heel_lock: bool | None = Field(default=None, description="True: heel must lock in")
     exclude_shoe_ids: list[int] = []
 
     @field_validator("toe_box", "upper_volume", "categories", "exclude_shoe_ids", mode="before")
@@ -103,6 +104,8 @@ def apply_filters(stmt: Select, f: ShoeFilters) -> Select:
         conditions.append(_known_or(Shoe.stack_heel_mm, Shoe.stack_heel_mm >= f.min_stack_heel_mm))
     if f.max_stack_heel_mm is not None:
         conditions.append(_known_or(Shoe.stack_heel_mm, Shoe.stack_heel_mm <= f.max_stack_heel_mm))
+    if f.heel_lock is not None:
+        conditions.append(_known_or(Shoe.heel_lock, Shoe.heel_lock.is_(f.heel_lock)))
     if f.exclude_shoe_ids:
         conditions.append(Shoe.id.not_in(f.exclude_shoe_ids))
     return stmt.where(*conditions)

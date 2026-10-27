@@ -106,6 +106,58 @@ the next half size and marks the size as not confident.
 `uv run pytest -m llm` runs the agent for real on the 5 profiles in
 `evals/datasets/agent_profiles.json` (needs `ANTHROPIC_API_KEY`).
 
+## Feedback loop
+
+`POST /users/{id}/feedback` records a rating and notes for a shoe the runner tried. On the
+next recommendation: shoes rated 2 or lower are excluded, shoes rated 3 are ranked lower, and
+notes like "toe box too narrow" are turned into fit constraints (one model call, using that
+shoe's specs) that narrow every search and are re-checked on the final picks.
+
+## Evals
+
+```bash
+cp evals/datasets/expert_picks.template.json evals/datasets/expert_picks.json  # then fill in
+uv run python -m evals.run_evals --local --limit 2        # score locally, no LangSmith
+uv run python -m evals.run_evals --backend both           # LangSmith experiments + table below
+uv run python -m evals.run_evals --parser                 # scan-parser accuracy on samples
+```
+
+Scores: **hit rate** (an expert's pick is in the top 3), **size accuracy** (within half a size
+of the expert's), **link validity** (every link exists in `offers`; must be 1.00), and
+**parser accuracy** (share of scan fields read correctly). LangSmith runs need
+`LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY`. Each profile makes ~10-20 model calls.
+
+Chroma vs pgvector (written by `--backend both`):
+
+<!-- eval-results:start -->
+_Not run yet: needs expert picks in `evals/datasets/expert_picks.json` and an LLM provider._
+<!-- eval-results:end -->
+
+## MCP server (Claude Desktop)
+
+The MCP server exposes three tools: `find_shoes`, `fit_check` and `get_offers`. They make no
+model calls; Claude Desktop does the reasoning. Add this to
+`~/Library/Application Support/Claude/claude_desktop_config.json`, then restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "shoe-recommender": {
+      "command": "/opt/homebrew/bin/uv",
+      "args": [
+        "--directory", "/Users/allenlu/Desktop/projects/running-shoes-recommender",
+        "run", "python", "-m", "app.mcp_server"
+      ]
+    }
+  }
+}
+```
+
+Postgres must be running, the catalog and offers loaded, and fit notes embedded (see above).
+Try: "Find shoes for user `<id>`", "How would the Ghost 17 fit user `<id>`?",
+"Where can I buy the Ghost 17 in 9.5 wide?". Offers older than 48 hours are hidden, so re-run
+`load_offers` if links disappear.
+
 ## Development
 
 ```bash

@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent import sizing
+from app.agent.feedback import FeedbackConstraints, merge_filters
 from app.db.models import Feedback, FitNote, Offer, Shoe, User
 from app.retrieval.hybrid import ShoeCandidate, ShoeFilters, search_shoes
 from app.retrieval.store import relevance_search
@@ -71,7 +72,9 @@ def _fit_basis(foot_profile: dict | None) -> dict | None:
     }
 
 
-def get_profile(session: Session, user_id: uuid.UUID) -> dict:
+def get_profile(
+    session: Session, user_id: uuid.UUID, constraints: FeedbackConstraints | None = None
+) -> dict:
     user = session.get(User, user_id)
     if user is None:
         raise ValueError(f"unknown user {user_id}")
@@ -88,6 +91,8 @@ def get_profile(session: Session, user_id: uuid.UUID) -> dict:
         "questionnaire": user.questionnaire,
         "loved_shoe_ids": resolve_shoe_names(session, loved),
         "excluded_shoe_ids": sorted(excluded_shoe_ids(session, user)),
+        "deprioritized_shoe_ids": sorted({fb.shoe_id for fb, _ in feedback if fb.rating == 3}),
+        "feedback_constraints": None if constraints is None else constraints.model_dump(),
         "feedback": [
             {
                 "shoe_id": shoe.id,
@@ -164,20 +169,24 @@ def get_offers(
     ]
 
 
-def build_tools(session: Session, store: VectorStore) -> list[BaseTool]:
+def build_tools(
+    session: Session, store: VectorStore, constraints: FeedbackConstraints | None = None
+) -> list[BaseTool]:
     @tool("get_profile")
     def get_profile_tool(user_id: str) -> dict:
         """Get the runner's foot profile, questionnaire, past feedback, loved shoes matched
-        to catalog ids, and shoe ids to exclude (disliked or rated 2 or lower)."""
-        return get_profile(session, uuid.UUID(user_id))
+        to catalog ids, shoe ids to exclude (disliked or rated 2 or lower), shoe ids to rank
+        lower (rated 3), and fit constraints learned from their feedback notes."""
+        return get_profile(session, uuid.UUID(user_id), constraints)
 
     @tool("search_shoes")
     def search_shoes_tool(filters: ShoeFilters, vibe: str) -> list[dict]:
         """Hybrid search: spec filters on the catalog plus similarity of fit notes to `vibe`,
         a short description of the fit and feel wanted (e.g. "roomy toe box, snug low-volume
         upper, secure heel"). Returns up to 20 candidates with scores. Specs not yet known
-        pass the filters and are listed in `unknown_specs`."""
-        found = search_shoes(session, store, filters, vibe)
+        pass the filters and are listed in `unknown_specs`. Constraints from the runner's
+        feedback are applied automatically."""
+        found = search_shoes(session, store, merge_filters(filters, constraints), vibe)
         return [c.model_dump() for c in found]
 
     @tool("get_fit_notes")

@@ -9,7 +9,10 @@ How to work:
 drop/stack preferences, budget, category) and a short "feel" query describing the fit the \
 runner needs.
 3. If the runner listed loved shoes that are in the catalog, call similar_to on them first.
-4. Call search_shoes. Never pick a shoe listed in excluded_shoe_ids.
+4. Call search_shoes. Never pick a shoe listed in excluded_shoe_ids, and rank shoes in \
+deprioritized_shoe_ids (rated 3) below comparable alternatives. feedback_constraints, when \
+present, are what the runner's earlier shoes taught us: respect them (searches apply them \
+automatically) and explain in why_it_fits how each pick addresses them.
 5. For the best 5-6 candidates, call get_fit_notes to check toe box, width, volume and heel \
 fit against the scan. Watch for combinations a simple rule misses. Example: a wide forefoot \
 with a low instep needs a roomy toe box but a snug, low-volume upper and a secure heel, not \

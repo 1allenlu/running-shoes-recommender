@@ -276,8 +276,8 @@ Decision logic (put in the system prompt):
 
 ### Phase 8: MCP server
 
-- [ ] `mcp_server.py` with FastMCP exposing `find_shoes(profile_or_user_id, preferences)`, `fit_check(user_id, shoe)`, `get_offers(shoe, size, width)`, reusing the agent's tool functions
-- [ ] README section: how to add the server to Claude Desktop's config
+- [x] `mcp_server.py` with FastMCP (named `MCPServer` in MCP SDK 2.x) exposing `find_shoes(profile_or_user_id, preferences)`, `fit_check(user_id, shoe)`, `get_offers(shoe, size, width)`, reusing the agent's tool functions
+- [x] README section: how to add the server to Claude Desktop's config
 - [ ] Manual test from Claude Desktop
 
 **Done when:** Claude Desktop can call all three tools and get correct results.
@@ -285,7 +285,7 @@ Decision logic (put in the system prompt):
 ### Phase 9: Evals (LangSmith)
 
 - [ ] `evals/datasets/`: ~20 test profiles; for each, shoes picked by an experienced runner or fitter (the user will supply these; leave a template)
-- [ ] Evaluators:
+- [x] Evaluators:
   - **Hit rate:** expert's pick appears in the top 3
   - **Size accuracy:** recommended size within half a size of the expert's
   - **Link validity:** 100% of URLs exist in `offers` (must be 100%)
@@ -296,8 +296,8 @@ Decision logic (put in the system prompt):
 
 ### Phase 10: Feedback loop
 
-- [ ] Feedback lowers or excludes shoes rated badly; notes like "toe box too narrow" add constraints to the next run (parsed by a small structured-output chain)
-- [ ] Test: after negative feedback on a shoe, the next recommendation excludes it and respects the new constraint
+- [x] Feedback lowers or excludes shoes rated badly; notes like "toe box too narrow" add constraints to the next run (parsed by a small structured-output chain)
+- [x] Test: after negative feedback on a shoe, the next recommendation excludes it and respects the new constraint
 
 **Done when:** the test passes.
 

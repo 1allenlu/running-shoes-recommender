@@ -1,8 +1,9 @@
 """Build and run the recommendation agent, then post-process its answer.
 
-`finalize` is where the guardrails are enforced in code: it drops excluded or unknown shoes,
-computes sizes, attaches offers from the database, removes any link that is not in `offers`
-(flagging the run), and adds the affiliate disclosure whenever links are present.
+`finalize` is where the guardrails are enforced in code: it drops excluded or unknown shoes
+and shoes that conflict with constraints from the runner's feedback, computes sizes, attaches
+offers from the database, removes any link that is not in `offers` (flagging the run), and
+adds the affiliate disclosure whenever links are present.
 """
 
 import uuid
@@ -11,11 +12,13 @@ from langchain.agents import create_agent
 from langchain.agents.structured_output import ProviderStrategy, ToolStrategy
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import Runnable
 from langchain_core.vectorstores import VectorStore
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent import sizing
+from app.agent.feedback import WIDTH_ORDER, FeedbackConstraints, derive_constraints
 from app.agent.prompts import RECOMMENDER_SYSTEM, recommend_request
 from app.agent.tools import build_tools, excluded_shoe_ids, get_offers
 from app.config import get_settings
@@ -41,10 +44,15 @@ def response_format():
     return ToolStrategy(AgentRecommendation)
 
 
-def build_agent(session: Session, store: VectorStore, model: BaseChatModel | None = None):
+def build_agent(
+    session: Session,
+    store: VectorStore,
+    model: BaseChatModel | None = None,
+    constraints: FeedbackConstraints | None = None,
+):
     return create_agent(
         model or get_chat_model(),
-        build_tools(session, store),
+        build_tools(session, store, constraints),
         system_prompt=RECOMMENDER_SYSTEM,
         response_format=response_format(),
     )
@@ -66,7 +74,12 @@ def validate_links(session: Session, rec: Recommendation) -> Recommendation:
     return rec
 
 
-def finalize(session: Session, user: User, answer: AgentRecommendation) -> Recommendation:
+def finalize(
+    session: Session,
+    user: User,
+    answer: AgentRecommendation,
+    constraints: FeedbackConstraints | None = None,
+) -> Recommendation:
     profile = FootProfile.model_validate(user.foot_profile)
     foot = profile.longer_foot
     excluded = excluded_shoe_ids(session, user)
@@ -84,6 +97,13 @@ def finalize(session: Session, user: User, answer: AgentRecommendation) -> Recom
             continue
         if shoe.id in seen:
             continue
+        conflicts = constraints.violations(shoe) if constraints else []
+        if conflicts:
+            flags.append(
+                f"dropped {shoe.brand} {shoe.model} {shoe.version}: conflicts with your "
+                f"feedback ({'; '.join(conflicts)})"
+            )
+            continue
         seen.add(shoe.id)
 
         note_ids = set(session.scalars(select(FitNote.id).where(FitNote.shoe_id == shoe.id)))
@@ -92,6 +112,13 @@ def finalize(session: Session, user: User, answer: AgentRecommendation) -> Recom
             flags.append(f"removed fit-note citations that are not about shoe {shoe.id}")
 
         size = sizing.pick_size(session, shoe.brand, foot.us_size, foot.width, profile.sex_scale)
+        if (
+            constraints
+            and constraints.width
+            and WIDTH_ORDER.index(constraints.width) > WIDTH_ORDER.index(size.width)
+        ):
+            size.basis += f" Width raised to {constraints.width} from your feedback."
+            size.width = constraints.width
         picks.append(
             Pick(
                 rank=len(picks) + 1,
@@ -120,15 +147,17 @@ def run_recommendation(
     user_id: uuid.UUID,
     store: VectorStore,
     model: BaseChatModel | None = None,
+    constraint_chain: Runnable | None = None,
 ) -> Recommendation:
     user = session.get(User, user_id)
     if user is None:
         raise ValueError(f"unknown user {user_id}")
     if user.foot_profile is None:
         raise ValueError("user has no confirmed foot profile")
-    agent = build_agent(session, store, model)
+    constraints = derive_constraints(session, user, constraint_chain)
+    agent = build_agent(session, store, model, constraints)
     result = agent.invoke(
         {"messages": [HumanMessage(recommend_request(str(user_id)))]},
         config={"run_name": "recommend", "recursion_limit": 50},
     )
-    return finalize(session, user, result["structured_response"])
+    return finalize(session, user, result["structured_response"], constraints)

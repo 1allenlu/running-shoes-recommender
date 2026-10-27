@@ -1,0 +1,29 @@
+[
+  {
+    "name": "TEMPLATE-replace-me-1",
+    "notes": "Copy this file to expert_picks.json and add ~20 real runners. expert_picks are the shoes an experienced runner or fitter would choose for this profile, with the size and width they would order. Shoe names need model and version (brand optional) as in data/seed/shoes.csv.",
+    "foot_profile": {
+      "sex_scale": "men",
+      "left": {
+        "us_size": 8.1, "width": "E",
+        "arch_height": {"band": "low", "position": 0.10},
+        "instep_height": {"band": "low", "position": 0.15},
+        "heel_width": {"band": "wide", "position": 0.75}
+      },
+      "right": {
+        "us_size": 8.3, "width": "E",
+        "arch_height": {"band": "low", "position": 0.40},
+        "instep_height": {"band": "low", "position": 0.20},
+        "heel_width": {"band": "medium", "position": 0.62}
+      }
+    },
+    "questionnaire": {
+      "weekly_km": 30, "goals": ["daily training"], "surface": "road", "feel": "balanced",
+      "budget_usd": 160, "loved_shoes": [], "disliked_shoes": []
+    },
+    "expert_picks": [
+      {"shoe": "TODO e.g. Altra Torin 8", "us_size": 8.5, "width": "wide"},
+      {"shoe": "TODO", "us_size": 8.5, "width": "wide"}
+    ]
+  }
+]

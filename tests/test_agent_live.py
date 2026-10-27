@@ -54,3 +54,26 @@ def test_agent_returns_three_valid_picks(case, real_catalog, db_session):
     disliked = [s["model"] for s in case["questionnaire"]["disliked_shoes"]]
     excluded = set(resolve_shoe_names(db_session, disliked).values())
     assert not excluded & {p.shoe_id for p in rec.picks}
+
+
+def test_constraint_chain_reads_relative_complaints():
+    """Real model: "toe box too narrow" on a medium toe box should require a roomy one."""
+    ready, reason = llm_ready()
+    if not ready:
+        pytest.skip(reason)
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+    from app.agent.feedback import CONSTRAINT_SYSTEM, build_constraint_chain
+
+    item = {
+        "shoe": "Acme Plush 3",
+        "rating": 2,
+        "size_worn": "9 wide",
+        "specs": {"toe_box": "medium", "upper_volume": "high", "heel_lock": True},
+        "note": "toe box too narrow, and my heel slipped on downhills",
+    }
+    result = build_constraint_chain().invoke(
+        [SystemMessage(CONSTRAINT_SYSTEM), HumanMessage(json.dumps([item]))]
+    )
+    assert result.toe_box == ["roomy"]
+    assert result.heel_lock is True
