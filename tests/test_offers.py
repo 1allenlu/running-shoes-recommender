@@ -4,10 +4,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import func, select
 
-from app.agent.tools import get_offers
 from app.db.models import Offer
 from app.ingest.load_catalog import DEFAULT_SEED_DIR, load_catalog
 from app.ingest.load_offers import DEFAULT_FEED, load_offers
+from app.retrieval.offers import get_offers
 
 pytestmark = pytest.mark.db
 
@@ -73,3 +73,29 @@ def test_sample_feed_matches_real_catalog(db_session, tmp_path):
     ]
     urls = db_session.scalars(select(Offer.affiliate_url)).all()
     assert all(u.startswith("https://example.com/") for u in urls)
+
+
+def test_link_guard_removes_urls_not_in_offers(catalog, db_session):
+    from app.retrieval.offers import validate_links
+    from app.schemas.recommendation import OfferLink, Pick, Recommendation, SizeAdvice
+
+    real = get_offers(db_session, catalog["Roomy"], 9.0, "wide")
+    fake = OfferLink(offer_id=0, retailer="Elsewhere", price_usd=1.0, url="https://evil.test/x")
+    size = SizeAdvice(us_size=9.0, width="wide", basis="b", confident=True)
+    pick = Pick(rank=1, shoe_id=catalog["Roomy"], brand="Acme", model="Roomy", version="1",
+                fit_score=90, contributions={}, why_it_fits=["r"], watch_for=[], size=size,
+                offers=[real[0], fake])  # fmt: skip
+    rec = validate_links(
+        db_session,
+        Recommendation(ranker_version="v", picks=[pick], summary="s", disclosure=None),
+    )
+    assert [o.url for o in rec.picks[0].offers] == [real[0].url]
+    assert rec.flags == ["removed 1 unknown link(s) from pick 1"]
+    assert rec.disclosure
+
+    pick.offers = [fake]
+    rec = validate_links(
+        db_session,
+        Recommendation(ranker_version="v", picks=[pick], summary="s", disclosure=None),
+    )
+    assert rec.picks[0].offers == [] and rec.disclosure is None

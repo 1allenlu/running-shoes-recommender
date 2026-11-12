@@ -94,7 +94,7 @@ def save_scan(
 
     scan = Scan(
         user_id=user_id,
-        raw_file_path=str(scan_dir),
+        raw_file_paths=[str(scan_dir / f"{i:02d}_{p.name}") for i, p in enumerate(paths)],
         parsed_profile=profile.model_dump(mode="json"),
         parser_version=PARSER_VERSION,
     )

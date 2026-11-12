@@ -1,4 +1,4 @@
-"""FootProfile: the scan parser's output. Mirrors ROADMAP.md section 5.
+"""FootProfile: the scan parser's output. Mirrors CLAUDE_CODE_PROMPT.md section 4.
 
 Fleet Feet / Volumental reports give a US size and width letter per foot; everything else is
 an arrow on a population scale. Arrows can sit between bands, so each scale stores the nearest
@@ -60,5 +60,5 @@ class FootProfile(BaseModel):
 
     @property
     def longer_foot(self) -> Foot:
-        """Size and width are chosen from the longer foot (ROADMAP Phase 4, step 1)."""
+        """Size and width come from the longer foot (CLAUDE_CODE_PROMPT.md section 5)."""
         return self.left if self.left.us_size >= self.right.us_size else self.right

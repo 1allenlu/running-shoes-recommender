@@ -14,13 +14,13 @@ from app.parsing.scan_parser import PARSER_VERSION, build_messages, parse_scan, 
 from app.schemas.foot_profile import FootProfile
 
 SAMPLE_DIR = Path("data/sample_scans")
-TEMPLATE = SAMPLE_DIR / "expected.template.json"
+FIXTURE = SAMPLE_DIR / "expected_profile.json"
 REPORT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
 
 
 @pytest.fixture
 def profile() -> FootProfile:
-    return FootProfile.model_validate_json(TEMPLATE.read_text())
+    return FootProfile.model_validate_json(FIXTURE.read_text())
 
 
 @pytest.fixture
@@ -114,14 +114,15 @@ def test_save_scan(db_session, report_files, profile, tmp_path, monkeypatch):
     stored = db_session.scalar(select(Scan).where(Scan.id == scan.id))
     assert stored.parser_version == PARSER_VERSION
     assert FootProfile.model_validate(stored.parsed_profile) == profile
-    saved = sorted(p.name for p in Path(stored.raw_file_path).iterdir())
+    saved = [Path(p).name for p in stored.raw_file_paths]
+    assert all(Path(p).exists() for p in stored.raw_file_paths)
     assert saved == ["00_page1.png", "01_report.pdf"]
 
 
 def sample_scans() -> list[Path]:
     if not SAMPLE_DIR.exists():
         return []
-    return sorted(d for d in SAMPLE_DIR.iterdir() if (d / "expected.json").exists())
+    return sorted(d for d in SAMPLE_DIR.iterdir() if (d / "expected_profile.json").exists())
 
 
 @pytest.mark.llm
@@ -131,5 +132,7 @@ def test_parser_matches_hand_checked_profile(scan_dir):
     if not ready:
         pytest.skip(reason)
     files = sorted(p for p in scan_dir.iterdir() if p.suffix.lower() in REPORT_SUFFIXES)
-    expected = FootProfile.model_validate(json.loads((scan_dir / "expected.json").read_text()))
+    expected = FootProfile.model_validate(
+        json.loads((scan_dir / "expected_profile.json").read_text())
+    )
     assert profile_mismatches(expected, parse_scan(files)) == []

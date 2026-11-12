@@ -1,0 +1,39 @@
+{
+  "sex_scale": "men",
+  "left": {
+    "us_size": 9.4,
+    "width": "D",
+    "arch_height": {
+      "band": "medium",
+      "position": 0.5
+    },
+    "instep_height": {
+      "band": "medium",
+      "position": 0.5
+    },
+    "heel_width": {
+      "band": "medium",
+      "position": 0.5
+    },
+    "pressure": null,
+    "arch_flexibility": null
+  },
+  "right": {
+    "us_size": 9.5,
+    "width": "D",
+    "arch_height": {
+      "band": "medium",
+      "position": 0.52
+    },
+    "instep_height": {
+      "band": "medium",
+      "position": 0.48
+    },
+    "heel_width": {
+      "band": "medium",
+      "position": 0.5
+    },
+    "pressure": null,
+    "arch_flexibility": null
+  }
+}

@@ -43,8 +43,8 @@ def db_session(db_url):
         session.rollback()
         session.execute(
             text(
-                "TRUNCATE shoes, fit_notes, size_charts, offers, users, scans, tasks, feedback "
-                "RESTART IDENTITY CASCADE"
+                "TRUNCATE shoes, fit_notes, size_charts, offers, users, scans, preferences, "
+                "shoe_history, recommendations, feedback RESTART IDENTITY CASCADE"
             )
         )
         session.commit()
@@ -57,12 +57,24 @@ SHOES_HEADER = (
 )
 
 
+LASTFIT_COLUMNS = (
+    "toebox_width_mm,toebox_width_bigtoe_mm,forefoot_width_mm,heel_width_mm,"
+    "upper_stretch,heel_counter,midsole_softness,stability_features"
+)
+
+
 @pytest.fixture
 def seed_dir(tmp_path: Path) -> Path:
     (tmp_path / "shoes.csv").write_text(
-        SHOES_HEADER
-        + "Acme,Glide,2,daily,8,38,30,250,standard|wide,roomy,low,true,140\n"
-        + "Acme,Zoom,1,race,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO,TODO\n"
+        SHOES_HEADER.rstrip("\n")
+        + ","
+        + LASTFIT_COLUMNS
+        + "\n"
+        + "Acme,Glide,2,daily,8,38,30,250,standard|wide,roomy,low,true,140,"
+        + "101,99,97,70,medium,firm,balanced,false\n"
+        + "Acme,Zoom,1,race,"
+        + ",".join(["TODO"] * 17)
+        + "\n"
     )
     (tmp_path / "fit_notes.jsonl").write_text(
         '{"brand": "Acme", "model": "Glide", "version": "2", "source": "s", "text": "roomy"}\n'

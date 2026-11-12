@@ -1,13 +1,12 @@
-"""Test doubles: keyword embeddings (deterministic, meaningful overlap), scripted chat model."""
+"""Test doubles: keyword embeddings (deterministic overlap) and a scripted chat model."""
 
 import hashlib
 import math
 import re
-from typing import Any
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 
 DIM = 384
@@ -31,21 +30,19 @@ class KeywordEmbeddings(Embeddings):
 
 
 class ScriptedChatModel(BaseChatModel):
-    """Replies with each scripted step in turn. A step is an AIMessage, or a function of the
-    conversation so far that returns one (to use ids seen in earlier tool results)."""
+    """Replies with the given messages in order (tool calls included); records what it saw."""
 
-    script: list[Any]  # AIMessage | Callable[[list[BaseMessage]], AIMessage]
-    calls: list[list[BaseMessage]] = []
+    script: list[AIMessage]
+    seen: list[list] = []
 
     @property
     def _llm_type(self) -> str:
         return "scripted"
 
-    def bind_tools(self, tools: Any, **kwargs: Any) -> "ScriptedChatModel":
+    def bind_tools(self, tools, **kwargs):
         return self
 
-    def _generate(self, messages: list[BaseMessage], stop=None, run_manager=None, **kwargs):
-        self.calls.append(list(messages))
-        step = self.script[len(self.calls) - 1]
-        message = step(messages) if callable(step) else step
-        return ChatResult(generations=[ChatGeneration(message=message)])
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
+        self.seen.append(list(messages))
+        reply = self.script.pop(0) if self.script else AIMessage(content="(no more script)")
+        return ChatResult(generations=[ChatGeneration(message=reply)])

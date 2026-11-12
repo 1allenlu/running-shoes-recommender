@@ -1,6 +1,5 @@
 import pytest
 
-from app.agent.recommender import response_format
 from app.config import get_settings
 from app.llm import get_chat_model, llm_ready, model_name, reads_pdfs
 
@@ -17,7 +16,6 @@ def provider(monkeypatch):
 
 
 def test_google_provider(provider):
-    from langchain.agents.structured_output import ToolStrategy
     from langchain_google_genai import ChatGoogleGenerativeAI
 
     provider("google", google_api_key=None)
@@ -27,17 +25,13 @@ def test_google_provider(provider):
     assert model_name() == "gemini-3.5-flash-lite"
     assert isinstance(get_chat_model(), ChatGoogleGenerativeAI)
     assert reads_pdfs()
-    assert isinstance(response_format(), ToolStrategy)
 
 
 def test_anthropic_provider(provider):
-    from langchain.agents.structured_output import ProviderStrategy
-
     provider("anthropic", anthropic_api_key=None)
     assert llm_ready() == (False, "ANTHROPIC_API_KEY not set")
     assert model_name() == "claude-opus-5-5"
     assert reads_pdfs()
-    assert isinstance(response_format(), ProviderStrategy)
 
 
 def test_ollama_provider_sends_pdf_pages_as_images(provider):

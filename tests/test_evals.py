@@ -2,21 +2,18 @@ import json
 from pathlib import Path
 
 import pytest
-from sqlalchemy import func, select
 
-from app.db.models import User
 from evals.run_evals import (
     TABLE_END,
     TABLE_START,
-    comparison_table,
     load_cases,
+    results_table,
     run_local,
     save_table,
 )
-from evals.scoring import hit_rate, link_validity, parser_accuracy, size_accuracy
-from tests.agent_script import agent_pick, scripted_agent
+from evals.scoring import grounding, hit_rate, link_validity, parser_accuracy, size_accuracy
 
-TEMPLATE_PROFILE = json.loads(Path("data/sample_scans/expected.template.json").read_text())
+FIXTURE = json.loads(Path("data/sample_scans/expected_profile.json").read_text())
 
 
 def pick(model, version, size, urls=()):
@@ -51,11 +48,11 @@ def test_link_validity():
 
 
 def test_parser_accuracy_counts_fields():
-    assert parser_accuracy(TEMPLATE_PROFILE, TEMPLATE_PROFILE)["score"] == 1.0
-    off = json.loads(json.dumps(TEMPLATE_PROFILE))
+    assert parser_accuracy(FIXTURE, FIXTURE)["score"] == 1.0
+    off = json.loads(json.dumps(FIXTURE))
     off["left"]["us_size"] = 8.0
     off["right"]["heel_width"]["position"] = 0.9  # 0.28 off
-    result = parser_accuracy(TEMPLATE_PROFILE, off)
+    result = parser_accuracy(FIXTURE, off)
     assert result["score"] == pytest.approx(1 - 2 / 15)
     assert result["comment"] == "wrong: left.us_size, right.heel_width"
 
@@ -65,34 +62,31 @@ def test_template_dataset_is_refused(tmp_path):
         load_cases(Path("evals/datasets/expert_picks.template.json"))
 
 
-def test_comparison_table_saved_between_readme_markers(tmp_path):
+def test_grounding_only_accepts_the_picks_own_notes():
+    rec = {"picks": [{"shoe_id": 1, "why_it_fits": ["Roomy toe box"], "watch_for": ["Odd claim"]}]}
+    result = grounding(rec, {1: {"Roomy toe box"}}, {"fallback line"})
+    assert result["score"] == 0.5 and "Odd claim" in result["comment"]
+
+
+def test_results_table_saved_between_readme_markers(tmp_path):
     readme = tmp_path / "README.md"
     readme.write_text(f"# x\n{TABLE_START}\nold\n{TABLE_END}\nafter\n")
-    summary = {"hit_rate": 1.0, "size_accuracy": None, "link_validity": 1.0}
-    table = comparison_table({"chroma": summary, "pgvector": summary}, 2)
-    save_table(table, readme=readme, results=tmp_path / "results.md")
+    summary = {"hit_rate": 1.0, "size_accuracy": None, "link_validity": 1.0, "grounding": 1.0}
+    save_table(results_table(summary, 2), readme=readme, results=tmp_path / "results.md")
     text = readme.read_text()
-    assert "old" not in text and "| pgvector | 1.00 | n/a | 1.00 |" in text
+    assert "old" not in text and "| 1.00 | n/a | 1.00 | 1.00 |" in text
     assert text.endswith(f"{TABLE_END}\nafter\n")
 
 
 @pytest.mark.db
-def test_run_local_end_to_end(indexed, db_session, store):
+def test_run_local_end_to_end(catalog, db_session):
     case = {
         "name": "wide-forefoot",
-        "foot_profile": TEMPLATE_PROFILE,
-        "questionnaire": {},
-        "expert_picks": [{"shoe": "Acme Roomy 1", "us_size": 9.0, "width": "wide"}],
+        "foot_profile": FIXTURE,
+        "preferences": {"feel": "balanced"},
+        "history": [{"raw_name": "Acme Narrow 2", "rating": "hated"}],
+        "expert_picks": [{"shoe": "Acme Roomy 1", "us_size": 9.5, "width": "wide"}],
     }
-
-    def model_factory(_case):
-        return scripted_agent(
-            lambda _: {
-                "summary": "s",
-                "picks": [agent_pick(indexed[m]) for m in ("Roomy", "Plush", "Daily")],
-            }
-        )
-
-    summary = run_local(db_session, store, [case, case], model_factory)
-    assert summary == {"hit_rate": 1.0, "size_accuracy": 1.0, "link_validity": 1.0}
-    assert db_session.scalar(select(func.count()).select_from(User)) == 0  # users cleaned up
+    summary = run_local(db_session, [case, case])
+    assert summary == {"hit_rate": 1.0, "size_accuracy": 1.0, "link_validity": 1.0,
+                       "grounding": 1.0}  # fmt: skip

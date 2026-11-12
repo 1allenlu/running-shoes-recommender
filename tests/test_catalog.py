@@ -56,7 +56,7 @@ def test_load_is_idempotent(db_session, seed_dir):
 def test_reload_applies_edits(db_session, seed_dir):
     load_catalog(db_session, seed_dir)
     shoes = seed_dir / "shoes.csv"
-    shoes.write_text(shoes.read_text().replace(",140\n", ",150\n"))
+    shoes.write_text(shoes.read_text().replace(",140,", ",150,"))
     notes = seed_dir / "fit_notes.jsonl"
     notes.write_text(notes.read_text().replace('"soft"', '"plush"'))
 
@@ -84,3 +84,12 @@ def test_real_seed_loads(db_session, tmp_path):
     report = load_catalog(db_session, tmp_path / "seed")
     assert report.shoes >= 20
     assert report.fit_notes_added >= 3 * report.shoes
+
+
+def test_todo_verify_lists_only_missing_specs(seed_dir):
+    from app.ingest.validate_catalog import todo_verify_markdown
+
+    md = todo_verify_markdown(seed_dir)
+    assert "Acme Glide" not in md
+    assert "- [ ] **Acme Zoom 1**: drop_mm," in md
+    assert "1 rows with TODO lengths" in md

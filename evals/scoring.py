@@ -1,9 +1,10 @@
-"""Eval scores (ROADMAP Phase 9). Pure functions over plain dicts, so they work both in the
-local runner and as LangSmith evaluators.
+"""Eval scores (CLAUDE_CODE_PROMPT.md Phase 12). Pure functions over plain dicts, so they
+work both in the local runner and as LangSmith evaluators.
 
 - hit_rate: an expert's pick appears in the top 3
 - size_accuracy: recommended size within half a size of the expert's, for matched shoes
 - link_validity: share of links that exist in `offers` (must be 1.0)
+- grounding: share of reasons and caveats that trace to one of the pick's sub-score notes
 - parser_accuracy: share of scan fields the parser got right (sizes/widths exact, bands equal,
   positions within the tolerance)
 """
@@ -69,6 +70,22 @@ def link_validity(rec: dict, known_urls: set[str]) -> dict:
         "key": "link_validity",
         "score": 1 - len(bad) / len(urls),
         "comment": f"unknown: {bad}" if bad else f"{len(urls)} links, all in offers",
+    }
+
+
+def grounding(rec: dict, notes_by_shoe: dict[int, set[str]], fallbacks: set[str]) -> dict:
+    """Guardrail 3: every reason must come from the ranker's own notes for that shoe."""
+    lines = [
+        (p["shoe_id"], line) for p in rec["picks"] for line in p["why_it_fits"] + p["watch_for"]
+    ]
+    if not lines:
+        return {"key": "grounding", "score": None, "comment": "no reasons"}
+    known = {sid: {n.lower() for n in notes} | fallbacks for sid, notes in notes_by_shoe.items()}
+    bad = [line for sid, line in lines if line.lower() not in known.get(sid, fallbacks)]
+    return {
+        "key": "grounding",
+        "score": 1 - len(bad) / len(lines),
+        "comment": f"ungrounded: {bad}" if bad else f"{len(lines)} lines, all grounded",
     }
 
 

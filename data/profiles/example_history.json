@@ -1,0 +1,21 @@
+[
+  {
+    "raw_name": "Nike Pegasus 41",
+    "rating": "hated",
+    "issues": [
+      "toe_pressure"
+    ]
+  },
+  {
+    "raw_name": "Brooks Ghost 17",
+    "rating": "fine",
+    "issues": [
+      "toe_pressure"
+    ]
+  },
+  {
+    "raw_name": "Altra Torin 8",
+    "rating": "loved",
+    "issues": []
+  }
+]

@@ -23,6 +23,9 @@ DEFAULT_SEED_DIR = Path("data/seed")
 TODO = "TODO"
 
 ShoeKey = tuple[str, str, str]  # brand, model, version
+# LastFit spec columns (optional in the CSV, so older seed files still load).
+MM_FIELDS = ("toebox_width_mm", "toebox_width_bigtoe_mm", "forefoot_width_mm", "heel_width_mm")
+LEVEL_FIELDS = ("upper_stretch", "heel_counter", "midsole_softness")
 
 
 def _value(cell: str) -> str | None:
@@ -67,6 +70,9 @@ def parse_shoes(path: Path) -> list[dict]:
                     "upper_volume": _value(row["upper_volume"]),
                     "heel_lock": _bool(row["heel_lock"]),
                     "price_usd": _decimal(row["price_usd"]),
+                    **{k: _decimal(row.get(k, "")) for k in MM_FIELDS},
+                    **{k: _value(row.get(k, "")) for k in LEVEL_FIELDS},
+                    "stability_features": _bool(row.get("stability_features", "")),
                 }
             )
     return rows
@@ -87,6 +93,7 @@ def parse_size_charts(path: Path) -> tuple[list[dict], int]:
                     "us_size": Decimal(row["us_size"]),
                     "length_mm_min": low,
                     "length_mm_max": high,
+                    "size_offset": _decimal(row.get("size_offset", "")) or Decimal(0),
                     "sizing_note": _value(row["sizing_note"]),
                 }
             )

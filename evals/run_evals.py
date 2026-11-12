@@ -1,12 +1,11 @@
-"""Run the Phase 9 evals.
+"""Run the evals (CLAUDE_CODE_PROMPT.md Phase 12).
 
-    uv run python -m evals.run_evals                   # LangSmith experiment on VECTOR_BACKEND
-    uv run python -m evals.run_evals --backend both    # chroma vs pgvector + comparison table
-    uv run python -m evals.run_evals --local           # no LangSmith: score locally, print table
-    uv run python -m evals.run_evals --parser          # scan-parser accuracy on data/sample_scans
+    uv run python -m evals.run_evals            # LangSmith experiment
+    uv run python -m evals.run_evals --local    # no LangSmith: score locally, print table
+    uv run python -m evals.run_evals --parser   # scan-parser accuracy on data/sample_scans
 
 Options: --dataset PATH (default evals/datasets/expert_picks.json), --limit N.
-Each recommendation makes ~10-20 model calls; use --limit on free tiers.
+Recommendations come from the ranker, so these make no LLM calls (the parser evals do).
 """
 
 import argparse
@@ -14,24 +13,26 @@ import hashlib
 import json
 import statistics
 import sys
-from collections.abc import Callable
 from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.agent.recommender import run_recommendation
-from app.config import configure_langsmith, get_settings
-from app.db.models import Offer, User
-from app.llm import model_name
-from evals.scoring import hit_rate, link_validity, parser_accuracy, size_accuracy
+from app.config import configure_langsmith
+from app.db.models import Offer
+from app.ranking.config import default_config
+from app.recommend import FALLBACK_LINES, recommend_for, sentence
+from app.schemas.foot_profile import FootProfile
+from app.schemas.preferences import HistoryEntry, Preferences
+from evals.scoring import grounding, hit_rate, link_validity, parser_accuracy, size_accuracy
 
 DEFAULT_DATASET = Path("evals/datasets/expert_picks.json")
 SAMPLE_SCANS = Path("data/sample_scans")
+EXPECTED_FILE = "expected_profile.json"
 RESULTS_FILE = Path("evals/results.md")
 README = Path("README.md")
 TABLE_START, TABLE_END = "<!-- eval-results:start -->", "<!-- eval-results:end -->"
-REC_KEYS = ("hit_rate", "size_accuracy", "link_validity")
+REC_KEYS = ("hit_rate", "size_accuracy", "link_validity", "grounding")
 
 
 def load_cases(path: Path, limit: int | None = None) -> list[dict]:
@@ -44,24 +45,28 @@ def load_cases(path: Path, limit: int | None = None) -> list[dict]:
     return cases[:limit] if limit else cases
 
 
-def run_case(session: Session, store, case: dict, model=None, constraint_chain=None) -> dict:
-    """Recommend for a throwaway user built from the case; returns the Recommendation as JSON."""
-    user = User(foot_profile=case["foot_profile"], questionnaire=case["questionnaire"])
-    session.add(user)
-    session.commit()
-    try:
-        rec = run_recommendation(session, user.id, store, model, constraint_chain)
-        return rec.model_dump(mode="json")
-    finally:
-        session.delete(user)
-        session.commit()
+def run_case(session: Session, case: dict) -> dict:
+    """The Recommendation for one case as JSON, plus each pick's sub-score notes."""
+    rec, ranking = recommend_for(
+        session,
+        FootProfile.model_validate(case["foot_profile"]),
+        Preferences.model_validate(case.get("preferences") or {}),
+        [HistoryEntry.model_validate(h) for h in case.get("history", [])],
+    )
+    notes = {
+        c.shoe_id: sorted({sentence(s.note) for s in c.subscores.values()}) for c in ranking.top
+    }
+    return {"recommendation": rec.model_dump(mode="json"), "notes": notes}
 
 
-def score_case(rec: dict, expert_picks: list[dict], known_urls: set[str]) -> list[dict]:
+def score_case(out: dict, expert_picks: list[dict], known_urls: set[str]) -> list[dict]:
+    rec = out["recommendation"]
+    notes = {int(k): set(v) for k, v in out["notes"].items()}
     return [
         hit_rate(rec, expert_picks),
         size_accuracy(rec, expert_picks),
         link_validity(rec, known_urls),
+        grounding(rec, notes, {line.lower() for line in FALLBACK_LINES}),
     ]
 
 
@@ -74,52 +79,30 @@ def summarize(scores: list[list[dict]]) -> dict[str, float | None]:
     return summary
 
 
-def prepare_backend(session: Session, backend: str):
-    """Point the app at a vector backend and (re)build its fit-note index."""
-    from app.ingest.embed_fit_notes import embed_fit_notes
-    from app.retrieval.store import get_store
-
-    get_settings().vector_backend = backend
-    store = get_store()
-    embed_fit_notes(session, store)
-    return store
-
-
-def run_local(
-    session: Session,
-    store,
-    cases: list[dict],
-    model_factory: Callable | None = None,
-    constraint_chain=None,
-) -> dict[str, float | None]:
+def run_local(session: Session, cases: list[dict]) -> dict[str, float | None]:
     known_urls = set(session.scalars(select(Offer.affiliate_url)))
     all_scores = []
     for case in cases:
-        model = model_factory(case) if model_factory else None
-        rec = run_case(session, store, case, model, constraint_chain)
-        scores = score_case(rec, case["expert_picks"], known_urls)
+        scores = score_case(run_case(session, case), case["expert_picks"], known_urls)
         all_scores.append(scores)
         line = "  ".join(f"{s['key']}={_fmt(s['score'])}" for s in scores)
         print(f"  {case['name']}: {line}")
     return summarize(all_scores)
 
 
-def run_langsmith(session: Session, store, cases: list[dict], backend: str) -> dict:
+def run_langsmith(session: Session, cases: list[dict]) -> dict:
     from langsmith import Client, evaluate
 
     client = Client()
     content = json.dumps(cases, sort_keys=True).encode()
-    dataset_name = f"shoe-rec-expert-picks-{hashlib.sha256(content).hexdigest()[:8]}"
+    dataset_name = f"lastfit-expert-picks-{hashlib.sha256(content).hexdigest()[:8]}"
     if not client.has_dataset(dataset_name=dataset_name):
         dataset = client.create_dataset(dataset_name, description="Profiles + expert shoe picks")
         client.create_examples(
             dataset_id=dataset.id,
             examples=[
                 {
-                    "inputs": {
-                        "foot_profile": c["foot_profile"],
-                        "questionnaire": c["questionnaire"],
-                    },
+                    "inputs": {k: c.get(k) for k in ("foot_profile", "preferences", "history")},
                     "outputs": {"expert_picks": c["expert_picks"]},
                     "metadata": {"name": c["name"]},
                 }
@@ -127,53 +110,46 @@ def run_langsmith(session: Session, store, cases: list[dict], backend: str) -> d
             ],
         )
     known_urls = set(session.scalars(select(Offer.affiliate_url)))
+    by_key = {}
 
-    def target(inputs: dict) -> dict:
-        return {"recommendation": run_case(session, store, inputs)}
+    def evaluator(key):
+        def run(outputs: dict, reference_outputs: dict) -> dict:
+            scores = score_case(outputs, reference_outputs["expert_picks"], known_urls)
+            return next(s for s in scores if s["key"] == key)
 
-    def hit(outputs: dict, reference_outputs: dict) -> dict:
-        return hit_rate(outputs["recommendation"], reference_outputs["expert_picks"])
-
-    def size(outputs: dict, reference_outputs: dict) -> dict:
-        return size_accuracy(outputs["recommendation"], reference_outputs["expert_picks"])
-
-    def links(outputs: dict) -> dict:
-        return link_validity(outputs["recommendation"], known_urls)
+        run.__name__ = key
+        return run
 
     results = evaluate(
-        target,
+        lambda inputs: run_case(session, inputs),
         data=dataset_name,
-        evaluators=[hit, size, links],
-        experiment_prefix=f"{backend}-{model_name()}",
-        metadata={"vector_backend": backend, "llm_provider": get_settings().llm_provider,
-                  "llm_model": model_name()},
+        evaluators=[evaluator(k) for k in REC_KEYS],
+        experiment_prefix=f"ranker-{default_config().version}",
+        metadata={"ranker_version": default_config().version},
         max_concurrency=1,
-    )  # fmt: skip
+    )
     scores = [
         [{"key": r.key, "score": r.score} for r in row["evaluation_results"]["results"]]
         for row in results
     ]
-    return summarize(scores)
+    by_key.update(summarize(scores))
+    return by_key
 
 
 def _fmt(value) -> str:
     return "n/a" if value is None else f"{value:.2f}"
 
 
-def comparison_table(by_backend: dict[str, dict], n_cases: int) -> str:
-    settings = get_settings()
-    lines = [
-        f"Model: `{settings.llm_provider}` / `{model_name()}`, {n_cases} profiles.",
-        "",
-        "| Backend | Hit rate | Size accuracy | Link validity |",
-        "| --- | --- | --- | --- |",
-    ]
-    for backend, s in by_backend.items():
-        lines.append(
-            f"| {backend} | {_fmt(s['hit_rate'])} | {_fmt(s['size_accuracy'])} "
-            f"| {_fmt(s['link_validity'])} |"
-        )
-    return "\n".join(lines)
+def results_table(summary: dict, n_cases: int) -> str:
+    return "\n".join(
+        [
+            f"Ranker `{default_config().version}`, {n_cases} profiles.",
+            "",
+            "| Hit@3 | Size within ½ | Link validity | Grounding |",
+            "| --- | --- | --- | --- |",
+            "| " + " | ".join(_fmt(summary[k]) for k in REC_KEYS) + " |",
+        ]
+    )
 
 
 def save_table(table: str, readme: Path = README, results: Path = RESULTS_FILE) -> None:
@@ -192,7 +168,7 @@ def run_parser_evals(scan_dirs: list[Path]) -> float | None:
     scores = []
     for scan_dir in scan_dirs:
         files = sorted(p for p in scan_dir.iterdir() if p.suffix.lower() in suffixes)
-        expected = json.loads((scan_dir / "expected.json").read_text())
+        expected = json.loads((scan_dir / EXPECTED_FILE).read_text())
         result = parser_accuracy(expected, parse_scan(files).model_dump())
         scores.append(result["score"])
         print(f"  {scan_dir.name}: {result['score']:.2f} ({result['comment']})")
@@ -204,14 +180,13 @@ def main(argv: list[str] | None = None) -> None:
 
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
-    parser.add_argument("--backend", choices=["chroma", "pgvector", "both"])
     parser.add_argument("--local", action="store_true", help="score locally, skip LangSmith")
     parser.add_argument("--parser", action="store_true", help="scan-parser accuracy only")
     parser.add_argument("--limit", type=int)
     args = parser.parse_args(argv)
 
     if args.parser:
-        scan_dirs = sorted(d for d in SAMPLE_SCANS.iterdir() if (d / "expected.json").exists())
+        scan_dirs = sorted(d for d in SAMPLE_SCANS.iterdir() if (d / EXPECTED_FILE).exists())
         if not scan_dirs:
             sys.exit(f"no hand-checked samples in {SAMPLE_SCANS} (see its README)")
         print(f"parser accuracy: {_fmt(run_parser_evals(scan_dirs[: args.limit]))}")
@@ -222,24 +197,12 @@ def main(argv: list[str] | None = None) -> None:
             "LangSmith is off: set LANGSMITH_TRACING=true and LANGSMITH_API_KEY, or use --local"
         )
     cases = load_cases(args.dataset, args.limit)
-    backend = args.backend or get_settings().vector_backend
-    backends = ["chroma", "pgvector"] if backend == "both" else [backend]
-
-    by_backend = {}
     with SessionLocal() as session:
-        for name in backends:
-            print(f"{name}:")
-            store = prepare_backend(session, name)
-            if args.local:
-                by_backend[name] = run_local(session, store, cases)
-            else:
-                by_backend[name] = run_langsmith(session, store, cases, name)
-
-    table = comparison_table(by_backend, len(cases))
+        summary = run_local(session, cases) if args.local else run_langsmith(session, cases)
+    table = results_table(summary, len(cases))
     print("\n" + table)
-    if len(backends) > 1:
-        save_table(table)
-        print(f"\nSaved to {RESULTS_FILE} and the README.")
+    save_table(table)
+    print(f"\nSaved to {RESULTS_FILE} and the README.")
 
 
 if __name__ == "__main__":
